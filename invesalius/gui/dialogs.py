@@ -2823,3 +2823,55 @@ class MaskBooleanDialog(wx.Dialog):
 
         self.Close()
         self.Destroy()
+
+class OverlayDialog(wx.Dialog):
+    def __init__(self, imagedata):
+        pre = wx.PreDialog()
+        pre.Create(wx.GetApp().GetTopWindow(), -1, _(u"Add NIFTI overlay"),  style=wx.DEFAULT_DIALOG_STYLE|wx.FRAME_FLOAT_ON_PARENT|wx.STAY_ON_TOP)
+        self.PostCreate(pre)
+
+        self.imagedata = imagedata
+
+        self._init_gui()
+        self.CenterOnScreen()
+
+    def _init_gui(self):
+        imgshape = self.imagedata.shape
+
+        box = wx.BoxSizer(wx.VERTICAL)
+        buttons = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.shape_text = []
+        self.shape_text.append( wx.StaticText(self, label="Slices in X: " + str(imgshape[0])) )
+        self.shape_text.append( wx.StaticText(self, label="Slices in Y: " + str(imgshape[1])) )
+        self.shape_text.append( wx.StaticText(self, label="Slices in Z: " + str(imgshape[2])) )
+        self.newShape = wx.StaticText(self, label="New shape: " + str(imgshape))
+
+        XYButton = wx.Button(self, label="X <-> Y", size=(70,30))
+        XZButton = wx.Button(self, label="X <-> Z", size=(70,30))
+        YZButton = wx.Button(self, label="Y <-> Z", size=(70,30))
+        rotButton = wx.Button(self, label="Rot90", size=(70,30))
+        okButton = wx.Button(self, label="Ok", size=(70,30))
+
+        self.Bind(wx.EVT_BUTTON, lambda event: self.SwapImageAxes(event, 0, 1), XYButton)
+        self.Bind(wx.EVT_BUTTON, lambda event: self.SwapImageAxes(event, 0, 2), XZButton)
+        self.Bind(wx.EVT_BUTTON, lambda event: self.SwapImageAxes(event, 1, 2), YZButton)
+        self.Bind(wx.EVT_BUTTON, self.Rotate90, rotButton)
+        self.Bind(wx.EVT_BUTTON, self.OnOk, okButton)
+
+        buttons.AddMany([(XYButton),(XZButton),(YZButton),(rotButton),(okButton)])
+        box.AddMany([(self.shape_text[0]), (self.shape_text[1]), (self.shape_text[2]), (self.newShape), (buttons)])
+        self.SetSizer(box)
+        self.Fit()
+
+    def SwapImageAxes(self, event, axis1, axis2):
+        self.imagedata = np.swapaxes(self.imagedata, axis1, axis2)
+        self.newShape.SetLabel( "New shape: " + str(self.imagedata.shape) )
+
+    def Rotate90(self, event):
+        self.imagedata = np.rot90(self.imagedata)
+        self.newShape.SetLabel( "New shape: " + str(self.imagedata.shape) )
+
+    def OnOk(self, event):
+        self.Close(True)
+        Publisher.sendMessage('Set slice overlay', self.imagedata)

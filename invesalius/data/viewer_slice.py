@@ -1056,7 +1056,7 @@ class Viewer(wx.Panel):
                                    (self.orientation, pos))
                 
     def OnScrollBar(self, evt=None, update3D=True):
-        pos = self.scroll.GetThumbPosition() 
+        pos = self.scroll.GetThumbPosition()
         self.set_slice_number(pos)
         if update3D:
             self.UpdateSlice3D(pos)
@@ -1065,14 +1065,14 @@ class Viewer(wx.Panel):
             # the actual orientation.
             focal_point = self.cross.GetFocalPoint()
             Publisher.sendMessage('Update cross position', focal_point)
-            Publisher.sendMessage('Update slice viewer') 
+            Publisher.sendMessage('Update slice viewer')
         else:
-            self.interactor.Render() 
+            self.interactor.Render()
         if evt:
             if self._flush_buffer:
                 self.slice_.apply_slice_buffer_to_mask(self.orientation)
             evt.Skip()
-            
+
     def OnScrollBarRelease(self, evt):
         pos = self.scroll.GetThumbPosition()
         evt.Skip()

@@ -85,6 +85,7 @@ class Controller():
         Publisher.subscribe(self.OnShowAnalyzeFile, 'Show analyze dialog')
         Publisher.subscribe(self.ShowBooleanOpDialog, 'Show boolean dialog')
         Publisher.subscribe(self.OnShowNiftiFile, 'Show nifti dialog')
+        Publisher.subscribe(self.OnShowOverlayDialog, 'Show overlay dialog')
 
     def OnCancelImport(self, pubsub_evt):
         #self.cancel_import = True
@@ -691,3 +692,15 @@ class Controller():
     def ShowBooleanOpDialog(self, pubsub_evt):
         dlg = dialogs.MaskBooleanDialog(prj.Project().mask_dict)
         dlg.Show()
+
+    def OnShowOverlayDialog(self, pubsub_evt):
+        dirpath = dialog.ShowOpenNiftiDialog()
+        nifti_image = nifti.ReadNifti(dirpath)
+        if nifti_image:
+            imagedata = nifti_image.get_data()
+
+            # Conversion of type of numpy array (to unsigned char)
+            imagedata = imagedata.astype('f')
+
+            dlg = dialogs.OverlayDialog(imagedata)
+            dlg.Show()

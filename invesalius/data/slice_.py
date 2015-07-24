@@ -101,6 +101,8 @@ class Slice(object):
                               "CORONAL": SliceBuffer(),
                               "SAGITAL": SliceBuffer()}
 
+        self.overlay = None
+
         self.num_gradient = 0
         self.interaction_style = st.StyleStateManager()
 
@@ -179,7 +181,9 @@ class Slice(object):
 
         Publisher.subscribe(self.__undo_edition, 'Undo edition')
         Publisher.subscribe(self.__redo_edition, 'Redo edition')
- 
+
+        Publisher.subscribe(self.set_overlay, 'Set slice overlay')
+
     def GetMaxSliceNumber(self, orientation):
         shape = self.matrix.shape
         
@@ -552,7 +556,75 @@ class Slice(object):
                                                         1: (0.0, 1.0, 0.0, 1.0),
                                                         2: (1.0, 0.0, 0.0, 1.0)})
             final_image = self.do_blend(final_image, cimage)
+
+        # Does the overlay if it is set
+        if self.overlay is not None:
+           final_image = self.do_overlay(final_image, slice_number, orientation)
+
         return final_image
+
+    def do_overlay(self, imagedata, slice_number, orientation):
+        """
+        blend image with the Slice's overlay (intended for functional images)
+        """
+        if orientation == 'AXIAL':
+            overlay_slice = self.overlay[slice_number,:,:]
+        elif orientation == 'CORONAL':
+            overlay_slice = self.overlay[:,slice_number,:]
+        elif orientation == 'SAGITAL':
+            overlay_slice = self.overlay[:,:,slice_number]
+
+        # Conversion of numpy array to vtkImageData
+        overlay_vtk = converters.to_vtk(overlay_slice, self.spacing, slice_number, orientation)
+
+        range0 = numpy.amin(self.overlay)
+        range1 = numpy.amax(self.overlay)
+
+        # Look-up Table
+        table = vtk.vtkLookupTable()
+        table.SetHueRange(1, 0)
+        #table.SetSaturationRange(0, 1)
+        #table.SetValueRange(0, 1)
+        #table.SetAlphaRange(0, 1)
+        table.SetTableRange(range0, range1)
+        table.Build()
+
+        # Filter to map colors of LUT to overlay image
+        map_colors = vtk.vtkImageMapToColors()
+        map_colors.SetLookupTable(table)
+        map_colors.SetInput(overlay_vtk)
+
+        # Blending of image and overlay
+        blend_imagedata = vtk.vtkImageBlend()
+        blend_imagedata.SetBlendModeToNormal()
+        blend_imagedata.SetOpacity(1, 0.5)
+        blend_imagedata.SetInput(imagedata)
+        blend_imagedata.AddInputConnection(map_colors.GetOutputPort())
+        blend_imagedata.Update()
+
+        return blend_imagedata.GetOutput()
+
+    def set_overlay(self, pubsub_evt):
+        overlay = pubsub_evt.data
+        slc = Slice()
+
+        y, x = slc.buffer_slices["AXIAL"].image.shape
+        z = slc.buffer_slices["SAGITAL"].image.shape[0]
+
+        # Add borders (with zero values) to overlay array to fit the dimensions of the 3D image
+        pad_x = numpy.abs( (x/2.0) - (overlay.shape[0]/2.0) )
+        pad_y = numpy.abs( (y/2.0) - (overlay.shape[1]/2.0) )
+        pad_z = numpy.abs( (z/2.0) - (overlay.shape[2]/2.0) )
+        final_overlay = numpy.pad(overlay, ((pad_x,pad_x),(pad_y,pad_y),(pad_z,pad_z)), mode='constant', constant_values=0)
+
+        # Modifications to work with Invesalius?
+        final_overlay = numpy.swapaxes(final_overlay, 0, 2)
+        final_overlay = numpy.rot90(final_overlay, 2)
+        final_overlay = numpy.flipud(final_overlay)
+
+        slc.overlay = final_overlay
+
+        Publisher.sendMessage('Reload actual slice')
 
     def get_image_slice(self, orientation, slice_number, number_slices=1,
                         inverted=False, border_size=1.0):

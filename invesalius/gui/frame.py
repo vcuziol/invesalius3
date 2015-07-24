@@ -413,6 +413,9 @@ class Frame(wx.Frame):
         elif id == const.ID_CLEAN_MASK:
             self.OnCleanMask()
 
+        elif id == const.ID_OVERLAY:
+            self.OnOverlay()
+
     def OnSize(self, evt):
         """
         Refresh GUI when frame is resized.
@@ -527,6 +530,9 @@ class Frame(wx.Frame):
     def OnCleanMask(self):
         Publisher.sendMessage('Clean current mask')
         Publisher.sendMessage('Reload actual slice')
+
+    def OnOverlay(self):
+        Publisher.sendMessage('Show overlay dialog')
 
 # ------------------------------------------------------------------
 # ------------------------------------------------------------------
@@ -659,6 +665,9 @@ class MenuBar(wx.MenuBar):
 
         tools_menu.AppendMenu(-1,  _(u"Mask"), mask_menu)
 
+        # Overlay menu
+        overlay_menu = wx.Menu()
+        tools_menu.Append(const.ID_OVERLAY,  _("Add NIfTI overlay"))
 
         # VIEW
         #view_tool_menu = wx.Menu()
