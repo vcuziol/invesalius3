@@ -102,6 +102,8 @@ class Slice(object):
                               "SAGITAL": SliceBuffer()}
 
         self.overlay = None
+        self.overlay_range = []
+        self.overlay_alpha = 0.5
 
         self.num_gradient = 0
         self.interaction_style = st.StyleStateManager()
@@ -183,6 +185,8 @@ class Slice(object):
         Publisher.subscribe(self.__redo_edition, 'Redo edition')
 
         Publisher.subscribe(self.set_overlay, 'Set slice overlay')
+        Publisher.subscribe(self.clear_overlay, 'Clear overlay')
+        Publisher.subscribe(self.set_alpha_overlay, 'Set alpha overlay')
 
     def GetMaxSliceNumber(self, orientation):
         shape = self.matrix.shape
@@ -577,16 +581,13 @@ class Slice(object):
         # Conversion of numpy array to vtkImageData
         overlay_vtk = converters.to_vtk(overlay_slice, self.spacing, slice_number, orientation)
 
-        range0 = numpy.amin(self.overlay)
-        range1 = numpy.amax(self.overlay)
-
         # Look-up Table
         table = vtk.vtkLookupTable()
         table.SetHueRange(1, 0)
         #table.SetSaturationRange(0, 1)
         #table.SetValueRange(0, 1)
         #table.SetAlphaRange(0, 1)
-        table.SetTableRange(range0, range1)
+        table.SetTableRange(self.overlay_range[0], self.overlay_range[1])
         table.Build()
 
         # Filter to map colors of LUT to overlay image
@@ -597,7 +598,7 @@ class Slice(object):
         # Blending of image and overlay
         blend_imagedata = vtk.vtkImageBlend()
         blend_imagedata.SetBlendModeToNormal()
-        blend_imagedata.SetOpacity(1, 0.5)
+        blend_imagedata.SetOpacity(1, self.overlay_alpha)
         blend_imagedata.SetInput(imagedata)
         blend_imagedata.AddInputConnection(map_colors.GetOutputPort())
         blend_imagedata.Update()
@@ -605,7 +606,8 @@ class Slice(object):
         return blend_imagedata.GetOutput()
 
     def set_overlay(self, pubsub_evt):
-        overlay = pubsub_evt.data
+        overlay = pubsub_evt.data[0]
+        alpha = pubsub_evt.data[1]
         slc = Slice()
 
         y, x = slc.buffer_slices["AXIAL"].image.shape
@@ -623,8 +625,21 @@ class Slice(object):
         final_overlay = numpy.flipud(final_overlay)
 
         slc.overlay = final_overlay
+        slc.overlay_range = [numpy.amin(slc.overlay), numpy.amax(slc.overlay)]
+        slc.overlay_alpha = alpha
 
         Publisher.sendMessage('Reload actual slice')
+        Publisher.sendMessage("Set overlay")
+
+    def clear_overlay(self, pubsub_evt):
+        slc = Slice()
+        slc.overlay = None
+        slc.overlay_range = []
+
+        Publisher.sendMessage('Reload actual slice')
+
+    def set_alpha_overlay(self, pubsub_evt):
+        self.overlay_alpha = pubsub_evt.data
 
     def get_image_slice(self, orientation, slice_number, number_slices=1,
                         inverted=False, border_size=1.0):

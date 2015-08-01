@@ -415,6 +415,8 @@ class Frame(wx.Frame):
 
         elif id == const.ID_OVERLAY:
             self.OnOverlay()
+        elif id == const.ID_CLEAR_OVERLAY:
+            self.OnClearOverlay()
 
     def OnSize(self, evt):
         """
@@ -534,6 +536,9 @@ class Frame(wx.Frame):
     def OnOverlay(self):
         Publisher.sendMessage('Show overlay dialog')
 
+    def OnClearOverlay(self):
+        Publisher.sendMessage('Clear overlay')
+
 # ------------------------------------------------------------------
 # ------------------------------------------------------------------
 # ------------------------------------------------------------------
@@ -575,13 +580,15 @@ class MenuBar(wx.MenuBar):
         sub(self.OnRemoveMasks, "Remove masks")
         sub(self.OnShowMask, "Show mask")
 
+        sub(self.OnSetOverlay, "Set overlay")
+
         self.num_masks = 0
 
     def __init_items(self):
         """
         Create all menu and submenus, and add them to self.
         """
-        # TODO: This definetely needs improvements... ;)
+        # TODO: This definitely needs improvements... ;)
 
         #Import Others Files
         others_file_menu = wx.Menu()
@@ -667,7 +674,14 @@ class MenuBar(wx.MenuBar):
 
         # Overlay menu
         overlay_menu = wx.Menu()
-        tools_menu.Append(const.ID_OVERLAY,  _("Add NIfTI overlay"))
+
+        self.set_overlay_menu = overlay_menu.Append(const.ID_OVERLAY, _("Set NIfTI overlay"))
+        self.set_overlay_menu.Enable(False)
+
+        self.clear_overlay_menu = overlay_menu.Append(const.ID_CLEAR_OVERLAY, _("Clear overlay"))
+        self.clear_overlay_menu.Enable(False)
+
+        tools_menu.AppendMenu(-1, _("NIfTI overlay"), overlay_menu)
 
         # VIEW
         #view_tool_menu = wx.Menu()
@@ -747,6 +761,8 @@ class MenuBar(wx.MenuBar):
         for item in self.enable_items:
             self.Enable(item, True)
 
+        self.set_overlay_menu.Enable(True)
+
     def OnEnableUndo(self, pubsub_evt):
         value = pubsub_evt.data
         if value:
@@ -773,6 +789,8 @@ class MenuBar(wx.MenuBar):
         index, value = pubsub_evt.data
         self.clean_mask_menu.Enable(value)
 
+    def OnSetOverlay(self, pubsub_evt):
+        self.clear_overlay_menu.Enable(True)
 
 # ------------------------------------------------------------------
 # ------------------------------------------------------------------
