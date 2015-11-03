@@ -1221,7 +1221,7 @@ class SlicePlane:
     def Create(self):
         plane_x = self.plane_x = vtk.vtkImagePlaneWidget()
         plane_x.InteractionOff()
-        #Publisher.sendMessage('Input Image in the widget', 
+        #Publisher.sendMessage('Input Image in the widget',
                                                 #(plane_x, 'SAGITAL'))
         plane_x.SetPlaneOrientationToXAxes()
         plane_x.TextureVisibilityOn()
@@ -1233,7 +1233,7 @@ class SlicePlane:
 
         plane_y = self.plane_y = vtk.vtkImagePlaneWidget()
         plane_y.DisplayTextOff()
-        #Publisher.sendMessage('Input Image in the widget', 
+        #Publisher.sendMessage('Input Image in the widget',
                                                 #(plane_y, 'CORONAL'))
         plane_y.SetPlaneOrientationToYAxes()
         plane_y.TextureVisibilityOn()
@@ -1246,7 +1246,7 @@ class SlicePlane:
 
         plane_z = self.plane_z = vtk.vtkImagePlaneWidget()
         plane_z.InteractionOff()
-        #Publisher.sendMessage('Input Image in the widget', 
+        #Publisher.sendMessage('Input Image in the widget',
                                                 #(plane_z, 'AXIAL'))
         plane_z.SetPlaneOrientationToZAxes()
         plane_z.TextureVisibilityOn()

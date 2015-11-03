@@ -537,47 +537,14 @@ def nifti2mmap(nifti):
     header = nifti.get_header()
     temp_file = tempfile.mktemp()
 
-#     # Sagital
-#     if header['orient'] == 2:
-#         print "Orientation Sagital"
-#         shape = tuple([data.shape[i] for i in (1, 2, 0)])
-#         matrix = numpy.memmap(temp_file, mode='w+', dtype=data.dtype, shape=shape)
-#         for n, slice in enumerate(data):
-#             matrix[:,:, n] = slice
-# 
-#     # Coronal
-#     elif header['orient'] == 1:
-#         print "Orientation coronal"
-#         shape = tuple([data.shape[i] for i in (1, 0, 2)])
-#         matrix = numpy.memmap(temp_file, mode='w+', dtype=data.dtype, shape=shape)
-#         for n, slice in enumerate(data):
-#             matrix[:,n,:] = slice
-# 
-#     # AXIAL
-#     elif header['orient'] == 0:
-#         print "no orientation"
-#         shape = tuple([data.shape[i] for i in (0, 1, 2)])
-#         matrix = numpy.memmap(temp_file, mode='w+', dtype=data.dtype, shape=shape)
-#         for n, slice in enumerate(data):
-#             matrix[n] = slice
-# 
-#     else:
-#         print "Orientation Sagital"
-#         shape = tuple([data.shape[i] for i in (1, 2, 0)])
-#         matrix = numpy.memmap(temp_file, mode='w+', dtype=data.dtype, shape=shape)
-#         for n, slice in enumerate(data):
-#             matrix[:,:, n] = slice
+    # From XYZ to ZYX (used by Invesalius)
+    data = numpy.swapaxes(data, 0, 2)
+    data = numpy.fliplr(data)
 
-    print " Orientation Axial"
-    shape = tuple([data.shape[i] for i in (0, 1, 2)])
-    matrix = numpy.memmap(temp_file, mode='w+', dtype=data.dtype, shape=shape)
+    matrix = numpy.memmap(temp_file, mode='w+', dtype=data.dtype, shape=data.shape)
     data = imgnormalize(data)
-    dataswap = numpy.swapaxes(data, 2, 0)
-    dataswap[:] = dataswap[:, ::-1]
-    for n, slice in enumerate(dataswap):
-        print 'slice: ', slice
-        matrix[n] = slice
-    
+    matrix[:] = data[:]
+
     matrix.flush()
     return matrix, temp_file
 

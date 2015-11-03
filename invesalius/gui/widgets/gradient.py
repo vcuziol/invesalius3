@@ -45,8 +45,8 @@ class SliderEvent(wx.PyCommandEvent):
         wx.PyCommandEvent.__init__(self, evtType, id,)
         self.min_range = minRange
         self.max_range = maxRange
-        self.minimun = minValue
-        self.maximun = maxValue
+        self.minimum = minValue
+        self.maximum = maxValue
 
 class GradientSlider(wx.Panel):
     # This widget is formed by a gradient background (black-white), two push
@@ -63,8 +63,8 @@ class GradientSlider(wx.Panel):
 
         self.min_range = minRange
         self.max_range = maxRange
-        self.minimun = minValue
-        self.maximun = maxValue
+        self.minimum = minValue
+        self.maximum = maxValue
         self.colour = colour
         self.selected = 0
 
@@ -161,8 +161,8 @@ class GradientSlider(wx.Panel):
             elif x >= self.max_position:
                 x = self.max_position
 
-            value = self._min_position_to_minimun(x)
-            self.minimun = value
+            value = self._min_position_to_minimum(x)
+            self.minimum = value
             self.min_position = x
             self._generate_event(myEVT_SLIDER_CHANGING)
             self.Refresh()
@@ -175,8 +175,8 @@ class GradientSlider(wx.Panel):
             elif x < self.min_position:
                 x = self.min_position
 
-            value = self._max_position_to_maximun(x)
-            self.maximun = value
+            value = self._max_position_to_maximum(x)
+            self.maximum = value
             self.max_position = x
             self._generate_event(myEVT_SLIDER_CHANGING)
             self.Refresh()
@@ -185,24 +185,24 @@ class GradientSlider(wx.Panel):
         elif self.selected == 3:
             x -= self._delta
             slider_size = self.max_position - self.min_position
-            diff_values = self.maximun - self.minimun
+            diff_values = self.maximum - self.minimum
             
             if x - PUSH_WIDTH < 0:
                 min_x = PUSH_WIDTH
-                self.minimun = self._min_position_to_minimun(min_x)
-                self.maximun = self.minimun + diff_values
+                self.minimum = self._min_position_to_minimum(min_x)
+                self.maximum = self.minimum + diff_values
                 self.CalculateControlPositions()
             
             elif x + slider_size + PUSH_WIDTH > w:
                 max_x = w - PUSH_WIDTH
-                self.maximun = self._max_position_to_maximun(max_x)
-                self.minimun = self.maximun - diff_values
+                self.maximum = self._max_position_to_maximum(max_x)
+                self.minimum = self.maximum - diff_values
                 self.CalculateControlPositions()
 
             else:
                 min_x = x
-                self.minimun = self._min_position_to_minimun(min_x)
-                self.maximun = self.minimun + diff_values
+                self.minimum = self._min_position_to_minimum(min_x)
+                self.maximum = self.minimum + diff_values
                 self.CalculateControlPositions()
 
             self._generate_event(myEVT_SLIDER_CHANGING)
@@ -241,12 +241,12 @@ class GradientSlider(wx.Panel):
         window_width = w - 2*PUSH_WIDTH
         proportion = window_width / float(self.max_range - self.min_range)
 
-        self.min_position = int(round((self.minimun - self.min_range) * \
+        self.min_position = int(round((self.minimum - self.min_range) * \
                                       proportion)) + PUSH_WIDTH
-        self.max_position = int(round((self.maximun - self.min_range) * \
+        self.max_position = int(round((self.maximum - self.min_range) * \
                                       proportion)) + PUSH_WIDTH
 
-    def _max_position_to_maximun(self, max_position):
+    def _max_position_to_maximum(self, max_position):
         """ 
         Calculates the min and max value based on the control positions.
         """
@@ -254,20 +254,20 @@ class GradientSlider(wx.Panel):
         window_width = w - 2*PUSH_WIDTH
         proportion = window_width / float(self.max_range - self.min_range)
 
-        maximun = int(round((max_position - PUSH_WIDTH)/proportion + \
+        maximum = int(round((max_position - PUSH_WIDTH)/proportion + \
                 self.min_range))
 
-        return maximun
+        return maximum
 
-    def _min_position_to_minimun(self, min_position):
+    def _min_position_to_minimum(self, min_position):
         w, h = self.GetSize()
         window_width = w - 2*PUSH_WIDTH
         proportion = window_width / float(self.max_range - self.min_range)
 
-        minimun = int(round((min_position - PUSH_WIDTH)/proportion + \
+        minimum = int(round((min_position - PUSH_WIDTH)/proportion + \
                 self.min_range))
 
-        return minimun
+        return minimum
 
     def _is_over_what(self, position_x):
         # Test if the given position (x) is over some object. Return 1 to first
@@ -294,25 +294,25 @@ class GradientSlider(wx.Panel):
         self.CalculateControlPositions()
         self.Refresh()
 
-    def SetMinimun(self, minimun):
-        self.minimun = minimun
+    def Setminimum(self, minimum):
+        self.minimum = minimum
         self.CalculateControlPositions()
         self.Refresh()
 
-    def SetMaximun(self, maximun):
-        self.maximun = maximun
+    def Setmaximum(self, maximum):
+        self.maximum = maximum
         self.CalculateControlPositions()
         self.Refresh()
 
     def GetMaxValue(self):
-        return self.maximun
+        return self.maximum
 
     def GetMinValue(self):
-        return self.minimun
+        return self.minimum
 
     def _generate_event(self, event):
         evt = SliderEvent(event, self.GetId(), self.min_range,
-                          self.max_range, self.minimun, self.maximun)
+                          self.max_range, self.minimum, self.maximum)
         self.GetEventHandler().ProcessEvent(evt)
 
 
@@ -325,8 +325,8 @@ class GradientCtrl(wx.Panel):
         self.SetAutoLayout(1)
         self.min_range = minRange
         self.max_range = maxRange
-        self.minimun = minValue
-        self.maximun = maxValue
+        self.minimum = minValue
+        self.maximum = maxValue
         self.colour = colour
         self.changed = False
         self._draw_controls()
@@ -335,18 +335,18 @@ class GradientCtrl(wx.Panel):
 
     def _draw_controls(self):
         self.gradient_slider = GradientSlider(self, -1, self.min_range,
-                                              self.max_range, self.minimun,
-                                              self.maximun, self.colour)
+                                              self.max_range, self.minimum,
+                                              self.maximum, self.colour)
 
         self.spin_min = intctrl.IntCtrl(self, size=(40,20), 
                                         style=wx.TE_PROCESS_ENTER)
-        self.spin_min.SetValue(self.minimun)
+        self.spin_min.SetValue(self.minimum)
         if sys.platform != 'win32':
             self.spin_min.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
 
         self.spin_max = intctrl.IntCtrl(self, size=(40,20), 
                                         style=wx.TE_PROCESS_ENTER)
-        self.spin_max.SetValue(self.maximun)
+        self.spin_max.SetValue(self.maximum)
         if sys.platform != 'win32':
             self.spin_max.SetWindowVariant(wx.WINDOW_VARIANT_SMALL)
 
@@ -373,24 +373,24 @@ class GradientCtrl(wx.Panel):
         self.spin_max.Bind(wx.EVT_MOUSEWHEEL, self.OnMaxMouseWheel)
 
     def OnSlider(self, evt):
-        self.spin_min.SetValue(evt.minimun)
-        self.spin_max.SetValue(evt.maximun)
-        self.minimun = evt.minimun
-        self.maximun = evt.maximun
+        self.spin_min.SetValue(evt.minimum)
+        self.spin_max.SetValue(evt.maximum)
+        self.minimum = evt.minimum
+        self.maximum = evt.maximum
         self._GenerateEvent(myEVT_THRESHOLD_CHANGED)
 
     def OnSliding(self, evt):
-        self.spin_min.SetValue(evt.minimun)
-        self.spin_max.SetValue(evt.maximun)
-        self.minimun = evt.minimun
-        self.maximun = evt.maximun
+        self.spin_min.SetValue(evt.minimum)
+        self.spin_max.SetValue(evt.maximum)
+        self.minimum = evt.minimum
+        self.maximum = evt.maximum
         self._GenerateEvent(myEVT_THRESHOLD_CHANGING)
 
     def _FireSpinMinChange(self, evt):
         evt.Skip()
         value = int(self.spin_min.GetValue())
         if value < self.min_range or value > self.max_range:
-            self.spin_min.SetValue(self.minimun)
+            self.spin_min.SetValue(self.minimum)
             return
 
         if value != self.GetMinValue() or self.changed:
@@ -405,7 +405,7 @@ class GradientCtrl(wx.Panel):
         evt.Skip()
         value = int(self.spin_max.GetValue())
         if value < self.min_range or value > self.max_range:
-            self.spin_max.SetValue(self.maximun)
+            self.spin_max.SetValue(self.maximum)
             return
 
         if value != self.GetMaxValue() or self.changed:
@@ -460,8 +460,8 @@ class GradientCtrl(wx.Panel):
             if value > self.max_range:
                 value = int(self.max_range)
             self.spin_max.SetValue(value)
-            self.gradient_slider.SetMaximun(value)
-            self.maximun = value
+            self.gradient_slider.Setmaximum(value)
+            self.maximum = value
 
     def SetMinValue(self, value):
         if value is not None:
@@ -469,8 +469,8 @@ class GradientCtrl(wx.Panel):
             if value < self.min_range:
                 value = int(self.min_range)
             self.spin_min.SetValue(value)
-            self.gradient_slider.SetMinimun(value)
-            self.minimun = value
+            self.gradient_slider.Setminimum(value)
+            self.minimum = value
 
     def ChangeMinValue(self, e):
         # Why do I need to change slide min value if it has been changed for
@@ -487,10 +487,10 @@ class GradientCtrl(wx.Panel):
             self._GenerateEvent(myEVT_THRESHOLD_CHANGE)
 
     def GetMaxValue(self):
-        return self.maximun
+        return self.maximum
 
     def GetMinValue(self):
-        return self.minimun
+        return self.minimum
 
     def _GenerateEvent(self, event):
         if event == myEVT_THRESHOLD_CHANGING:
@@ -499,5 +499,5 @@ class GradientCtrl(wx.Panel):
             self.changed = False
 
         evt = SliderEvent(event, self.GetId(), self.min_range,
-                          self.max_range, self.minimun, self.maximun)
+                          self.max_range, self.minimum, self.maximum)
         self.GetEventHandler().ProcessEvent(evt)

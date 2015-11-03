@@ -102,8 +102,12 @@ class Slice(object):
                               "SAGITAL": SliceBuffer()}
 
         self.overlay = None
+        self.overlay_on = 1         # overlay show/hide
         self.overlay_range = []
+        self.overlay_window = []
         self.overlay_alpha = 0.5
+        self.overlay_table = None
+        self.overlay_ranges = [[0,1],[0,1],[0,1]]
 
         self.num_gradient = 0
         self.interaction_style = st.StyleStateManager()
@@ -187,6 +191,9 @@ class Slice(object):
         Publisher.subscribe(self.set_overlay, 'Set slice overlay')
         Publisher.subscribe(self.clear_overlay, 'Clear overlay')
         Publisher.subscribe(self.set_alpha_overlay, 'Set alpha overlay')
+        Publisher.subscribe(self.toggle_overlay, 'Toggle overlay')
+        Publisher.subscribe(self.set_overlay_table, 'Set overlay colormap')
+        Publisher.subscribe(self.set_overlay_window, 'Set overlay window')
 
     def GetMaxSliceNumber(self, orientation):
         shape = self.matrix.shape
@@ -562,7 +569,7 @@ class Slice(object):
             final_image = self.do_blend(final_image, cimage)
 
         # Does the overlay if it is set
-        if self.overlay is not None:
+        if self.overlay_on == 1 and self.overlay is not None:
            final_image = self.do_overlay(final_image, slice_number, orientation)
 
         return final_image
@@ -582,17 +589,28 @@ class Slice(object):
         overlay_vtk = converters.to_vtk(overlay_slice, self.spacing, slice_number, orientation)
 
         # Look-up Table
-        table = vtk.vtkLookupTable()
-        table.SetHueRange(1, 0)
-        #table.SetSaturationRange(0, 1)
-        #table.SetValueRange(0, 1)
-        #table.SetAlphaRange(0, 1)
-        table.SetTableRange(self.overlay_range[0], self.overlay_range[1])
-        table.Build()
+        # if self.overlay_table is None:
+        #     self.create_overlay_table()
+        self.create_overlay_table()
+
+        # Windowing of LUT
+        if len(self.overlay_window) > 0:
+            table_length = self.overlay_table.GetNumberOfTableValues()
+            i = 0
+            while i < table_length:
+                v = self.overlay_table.GetTableValue(i)
+
+                if (i < self.overlay_window[0] or i > self.overlay_window[1]) and v[3] == 1.0:
+                    self.overlay_table.SetTableValue(i, v[0], v[1], v[2], 0.0)     # set alpha to zero
+                else:
+                    #if v[3] < 1.0:
+                    self.overlay_table.SetTableValue(i, v[0], v[1], v[2], 1.0)
+                self.overlay_table.SetTableValue(self.overlay_table.GetIndex(0.0), 0, 0, 0, 0)     # set zero to transparent
+                i = i + 1
 
         # Filter to map colors of LUT to overlay image
         map_colors = vtk.vtkImageMapToColors()
-        map_colors.SetLookupTable(table)
+        map_colors.SetLookupTable(self.overlay_table)
         map_colors.SetInput(overlay_vtk)
 
         # Blending of image and overlay
@@ -605,28 +623,36 @@ class Slice(object):
 
         return blend_imagedata.GetOutput()
 
+    def create_overlay_table(self):
+        table = vtk.vtkLookupTable()
+        table.SetSaturationRange(self.overlay_ranges[0])
+        table.SetHueRange(self.overlay_ranges[1])
+        table.SetValueRange(self.overlay_ranges[2])
+        #table.SetAlphaRange(0, 1)
+        table.SetTableRange(self.overlay_range[0], self.overlay_range[1])
+        table.Build()
+        table.SetTableValue(table.GetIndex(0.0), 0, 0, 0, 0)     # set zero to transparent
+
+        if self.overlay_table is None:
+            Publisher.sendMessage('Update overlay window bounds', [0,table.GetNumberOfTableValues()-1])
+            Publisher.sendMessage('Set overlay window gradient values', [0,table.GetNumberOfTableValues()-1])
+
+        self.overlay_table = table
+
+    def set_overlay_table(self, pubsub_evt):
+        # self.overlay_table.SetSaturationRange(pubsub_evt.data[1])
+        # self.overlay_table.SetHueRange(pubsub_evt.data[2])
+        # self.overlay_table.SetValueRange(pubsub_evt.data[3])
+        self.overlay_ranges[0] = pubsub_evt.data[1]
+        self.overlay_ranges[1] = pubsub_evt.data[2]
+        self.overlay_ranges[2] = pubsub_evt.data[3]
+
     def set_overlay(self, pubsub_evt):
-        overlay = pubsub_evt.data[0]
-        alpha = pubsub_evt.data[1]
+        overlay = pubsub_evt.data
         slc = Slice()
 
-        y, x = slc.buffer_slices["AXIAL"].image.shape
-        z = slc.buffer_slices["SAGITAL"].image.shape[0]
-
-        # Add borders (with zero values) to overlay array to fit the dimensions of the 3D image
-        pad_x = numpy.abs( (x/2.0) - (overlay.shape[0]/2.0) )
-        pad_y = numpy.abs( (y/2.0) - (overlay.shape[1]/2.0) )
-        pad_z = numpy.abs( (z/2.0) - (overlay.shape[2]/2.0) )
-        final_overlay = numpy.pad(overlay, ((pad_x,pad_x),(pad_y,pad_y),(pad_z,pad_z)), mode='constant', constant_values=0)
-
-        # Modifications to work with Invesalius?
-        final_overlay = numpy.swapaxes(final_overlay, 0, 2)
-        final_overlay = numpy.rot90(final_overlay, 2)
-        final_overlay = numpy.flipud(final_overlay)
-
-        slc.overlay = final_overlay
+        slc.overlay = overlay
         slc.overlay_range = [numpy.amin(slc.overlay), numpy.amax(slc.overlay)]
-        slc.overlay_alpha = alpha
 
         Publisher.sendMessage('Reload actual slice')
         Publisher.sendMessage("Set overlay")
@@ -635,11 +661,18 @@ class Slice(object):
         slc = Slice()
         slc.overlay = None
         slc.overlay_range = []
+        slc.overlay_table = None
 
         Publisher.sendMessage('Reload actual slice')
 
     def set_alpha_overlay(self, pubsub_evt):
         self.overlay_alpha = pubsub_evt.data
+
+    def toggle_overlay(self, pubsub_evt):
+        self.overlay_on = not self.overlay_on
+
+    def set_overlay_window(self, pubsub_evt):
+        self.overlay_window = [pubsub_evt.data[0], pubsub_evt.data[1]]
 
     def get_image_slice(self, orientation, slice_number, number_slices=1,
                         inverted=False, border_size=1.0):

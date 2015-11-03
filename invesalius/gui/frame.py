@@ -534,7 +534,7 @@ class Frame(wx.Frame):
         Publisher.sendMessage('Reload actual slice')
 
     def OnOverlay(self):
-        Publisher.sendMessage('Show overlay dialog')
+        Publisher.sendMessage('Open overlay file')
 
     def OnClearOverlay(self):
         Publisher.sendMessage('Clear overlay')

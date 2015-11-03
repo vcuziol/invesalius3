@@ -30,6 +30,7 @@ import task_importer as importer
 import task_surface as surface
 import task_tools as tools
 import task_navigator as navigator
+import task_overlay as overlay
 
 FPB_DEFAULT_STYLE = 2621440
 
@@ -244,13 +245,15 @@ class UpperTaskPanel(wx.Panel):
             tasks = [(_("Load data"), importer.TaskPanel),
                      (_("Select region of interest"), slice_.TaskPanel),
                      (_("Configure 3D surface"), surface.TaskPanel),
-                     (_("Export data"), exporter.TaskPanel)
+                     (_("Export data"), exporter.TaskPanel),
+                     (_("Overlay fMRI image"), overlay.TaskPanel)
                     ]
         elif int(session.mode) == const.MODE_NAVIGATOR:
             tasks = [(_("Load data"), importer.TaskPanel),
                      (_("Select region of interest"), slice_.TaskPanel),
                      (_("Configure 3D surface"), surface.TaskPanel),
-                     (_("Utilize navigation system"), navigator.TaskPanel)]
+                     (_("Utilize navigation system"), navigator.TaskPanel),
+                     (_("Overlay fMRI image"), overlay.TaskPanel)]
 
         for i in xrange(len(tasks)):
             (name, panel) = tasks[i]

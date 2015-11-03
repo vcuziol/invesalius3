@@ -22,6 +22,7 @@ import plistlib
 import wx
 import numpy
 from wx.lib.pubsub import pub as Publisher
+from nibabel import as_closest_canonical, aff2axcodes
 
 import constants as const
 import data.imagedata_utils as image_utils
@@ -85,7 +86,7 @@ class Controller():
         Publisher.subscribe(self.OnShowAnalyzeFile, 'Show analyze dialog')
         Publisher.subscribe(self.ShowBooleanOpDialog, 'Show boolean dialog')
         Publisher.subscribe(self.OnShowNiftiFile, 'Show nifti dialog')
-        Publisher.subscribe(self.OnShowOverlayDialog, 'Show overlay dialog')
+        Publisher.subscribe(self.OnOpenOverlay, 'Open overlay file')
 
     def OnCancelImport(self, pubsub_evt):
         #self.cancel_import = True
@@ -121,10 +122,16 @@ class Controller():
         
     def OnShowNiftiFile(self, pubsub_evt):
         dirpath = dialog.ShowOpenNiftiDialog()
-        imagedata = nifti.ReadNifti(dirpath)
-        if imagedata:
-            self.CreateNiftiProject(imagedata)
-            
+        nifti_image = nifti.ReadNifti(dirpath)
+        
+        if nifti_image:
+            # Rearranges the axes of the image to be closest to RAS+ orientation,
+            # so the slices of the image (axial, coronal, sagittal) are shown correctly.
+            # See http://nipy.org/nibabel/image_orientation.html
+            nifti_image = as_closest_canonical(nifti_image)
+
+            self.CreateNiftiProject(nifti_image)
+
         self.LoadProject()
         Publisher.sendMessage("Enable state project", True)
 
@@ -482,7 +489,7 @@ class Controller():
         proj.SetAcquisitionModality("MRI")
         #TODO: Verify if all Nifti are in AXIAL orientation
 
-        # To get  Z, X, Y (used by InVesaliu), not X, Y, Z
+        # To get  Z, X, Y (used by InVesalius), not X, Y, Z
         matrix, matrix_filename = image_utils.nifti2mmap(imagedata)
 #         if header['orient'] == 0:
 #             proj.original_orientation =  const.AXIAL
@@ -693,14 +700,33 @@ class Controller():
         dlg = dialogs.MaskBooleanDialog(prj.Project().mask_dict)
         dlg.Show()
 
-    def OnShowOverlayDialog(self, pubsub_evt):
+    def OnOpenOverlay(self, pubsub_evt):
         dirpath = dialog.ShowOpenNiftiDialog()
         nifti_image = nifti.ReadNifti(dirpath)
+
         if nifti_image:
+            # Rearranges the axes of the image to be closest to RAS+ orientation,
+            # so the slices of the image (axial, coronal, sagittal) are shown correctly.
+            # See http://nipy.org/nibabel/image_orientation.html
+            nifti_image = as_closest_canonical(nifti_image)
+
             imagedata = nifti_image.get_data()
 
             # Conversion of type of numpy array (to unsigned char)
             imagedata = imagedata.astype('f')
 
-            dlg = dialogs.OverlayDialog(imagedata)
-            dlg.Show()
+            slc = sl.Slice()
+            y, x = slc.buffer_slices["AXIAL"].image.shape
+            z = slc.buffer_slices["SAGITAL"].image.shape[0]
+
+            # Add borders (with zero values) to overlay array to fit the dimensions of the 3D image
+            pad_x = numpy.abs( (x/2.0) - (imagedata.shape[0]/2.0) )
+            pad_y = numpy.abs( (y/2.0) - (imagedata.shape[1]/2.0) )
+            pad_z = numpy.abs( (z/2.0) - (imagedata.shape[2]/2.0) )
+            final_overlay = numpy.pad(imagedata, ((pad_x,pad_x),(pad_y,pad_y),(pad_z,pad_z)), mode='constant', constant_values=0)
+
+            # Modifications to work with Invesalius (Z,Y,X)
+            final_overlay = numpy.swapaxes(final_overlay, 0, 2)
+            final_overlay = numpy.fliplr(final_overlay)
+
+            Publisher.sendMessage('Set slice overlay', final_overlay)

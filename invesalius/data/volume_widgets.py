@@ -89,6 +89,7 @@ class Plane():
         # 3D widget for reslicing image data.
         # This 3D widget defines a plane that can be interactively placed in an image volume.
         widget = vtk.vtkImagePlaneWidget()
+        exec("widget.SetPlaneOrientationTo"+axes.upper()+"Axes()")
         widget.SetInput(imagedata)
         widget.SetSliceIndex(self.index)
         widget.SetPicker(picker)
@@ -97,7 +98,6 @@ class Plane():
         widget.TextureVisibilityOff()
         widget.DisplayTextOff()
         widget.RestrictPlaneToVolumeOff()
-        exec("widget.SetPlaneOrientationTo"+axes.upper()+"Axes()")
         widget.AddObserver("InteractionEvent",self.Update)
         self.widget = widget
         

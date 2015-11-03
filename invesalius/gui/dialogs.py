@@ -816,8 +816,8 @@ class NewMask(wx.Dialog):
         import project as prj
         proj = prj.Project()
         (thresh_min, thresh_max) = proj.threshold_modes[evt.GetString()]
-        self.gradient.SetMinimun(thresh_min)
-        self.gradient.SetMaximun(thresh_max)
+        self.gradient.SetMinimum(thresh_min)
+        self.gradient.SetMaximum(thresh_max)
 
     def OnSlideChanged(self, evt):
         import project as prj
@@ -2827,7 +2827,7 @@ class MaskBooleanDialog(wx.Dialog):
 class OverlayDialog(wx.Dialog):
     def __init__(self, imagedata):
         pre = wx.PreDialog()
-        pre.Create(wx.GetApp().GetTopWindow(), -1, _(u"Add NIfTI overlay"),  style=wx.DEFAULT_DIALOG_STYLE|wx.FRAME_FLOAT_ON_PARENT|wx.STAY_ON_TOP)
+        pre.Create(wx.GetApp().GetTopWindow(), -1, _(u"NIfTI file info"),  style=wx.DEFAULT_DIALOG_STYLE|wx.FRAME_FLOAT_ON_PARENT|wx.STAY_ON_TOP)
         self.PostCreate(pre)
 
         self.imagedata = imagedata
@@ -2850,65 +2850,20 @@ class OverlayDialog(wx.Dialog):
         self.shape_text.append( wx.StaticText(self, label="Sagittal slices (X axis): " + str(imgshape[0])) )
         self.shape_text.append( wx.StaticText(self, label="Coronal slices (Y axis): " + str(imgshape[1])) )
         self.shape_text.append( wx.StaticText(self, label="Axial slices (Z axis): " + str(imgshape[2])) )
-        self.newShape = wx.StaticText(self, label="New shape: " + str(imgshape))
 
-        # Volume buttons
-        XYButton = wx.Button(self, label="Swap X,Y axes", size=(100,30))
-        XZButton = wx.Button(self, label="Swap X,Z axes", size=(100,30))
-        YZButton = wx.Button(self, label="Swap Y,Z axes", size=(100,30))
-        rotButton = wx.Button(self, label="Rotate X,Y clockwise", size=(150,30))
-
-        self.Bind(wx.EVT_BUTTON, lambda event: self.SwapImageAxes(event, 0, 1), XYButton)
-        self.Bind(wx.EVT_BUTTON, lambda event: self.SwapImageAxes(event, 0, 2), XZButton)
-        self.Bind(wx.EVT_BUTTON, lambda event: self.SwapImageAxes(event, 1, 2), YZButton)
-        self.Bind(wx.EVT_BUTTON, self.Rotate90, rotButton)
-
-        # Alpha control
-        alpha_label = wx.StaticText(self, label="Alpha (opacity):")
-        self.alpha_slider = wx.Slider(self, value=50, size=(200,30), name="AlphaSlider")
-        self.alpha_text = wx.StaticText(self, label="50%")
-
-        self.alpha_slider.Bind(wx.EVT_SLIDER, self.OnSlider)
+        # Range of values of overlay image
+        # range = wx.StaticText(self, label=slc.overlay_range)
 
         # Buttons
         closeButton = wx.Button(self, label="Ok", size=(70,30))
 
         self.Bind(wx.EVT_BUTTON, self.OnClose, closeButton)
 
-        alpha_control.AddMany([alpha_label, self.alpha_slider, self.alpha_text])
-        buttons.AddMany([XYButton,XZButton,YZButton, rotButton, closeButton])
         box.AddMany([self.shape_text[0], self.shape_text[1], self.shape_text[2]])
         box.AddSpacer(10)
-        box.Add(self.newShape)
-        box.AddSpacer(10)
-        box.AddMany([alpha_control, buttons])
+        box.AddMany([buttons])
         self.SetSizer(box)
         self.Fit()
-
-        # Sets default imagedata on Slice, so the user can visualize the changes made on the dialog
-        self.Set()
-
-    def SwapImageAxes(self, event, axis1, axis2):
-        self.imagedata = np.swapaxes(self.imagedata, axis1, axis2)
-        self.newShape.SetLabel( "New shape: " + str(self.imagedata.shape) )
-        self.Set()
-
-    def Rotate90(self, event):
-        self.imagedata = np.rot90(self.imagedata)
-        self.newShape.SetLabel( "New shape: " + str(self.imagedata.shape) )
-        self.Set()
-
-    def OnSlider(self, event):
-        alpha = self.alpha_slider.GetValue()
-        self.alpha_text.SetLabel( str(alpha) + "%" )
-
-        Publisher.sendMessage('Set alpha overlay', alpha/100.0)
-        Publisher.sendMessage('Reload actual slice')
-
-    def Set(self):
-        final_alpha = self.alpha_slider.GetValue()/100.0
-        Publisher.sendMessage('Set slice overlay', [self.imagedata, final_alpha])
-        Publisher.sendMessage('Reload actual slice')
 
     def OnClose(self, event):
         self.Close(True)
